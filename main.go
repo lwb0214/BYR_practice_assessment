@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -63,8 +64,6 @@ func handlePostNewListRequest(request *TodoList) string {
 	defer mutex.Unlock()
 
 	listIDCounter++
-	todoLists[listIDCounter] = &TodoList{}
-
 	todoLists[listIDCounter] = request
 
 	return fmt.Sprintf(`{"id":%d}`, listIDCounter)
@@ -86,8 +85,11 @@ func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	// Read request
-	request := make([]byte, 1024)
+	request := make([]byte, 1024 * 1024)
 	_, err := conn.Read(request)
+	if err == io.EOF {
+		return
+	}
 	if err != nil {
 		fmt.Println("Error reading request:", err)
 		sendResponse(conn, 500, "Internal Server Error", "")
